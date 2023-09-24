@@ -1,0 +1,89 @@
+*** Commands ***
+
+*** DynamoDB Table ***
+aws dynamodb create-table \
+  --table-name GridBuilder \
+  --attribute-definitions \
+      AttributeName=uniqueGridId,AttributeType=S \
+      AttributeName=s3Key,AttributeType=S \
+  --key-schema \
+      AttributeName=uniqueGridId,KeyType=HASH \
+      AttributeName=s3Key,KeyType=RANGE \
+  --provisioned-throughput \
+      ReadCapacityUnits=5,WriteCapacityUnits=5
+      
+      
+cd ~/environment/api-backend-manual/add_image ; zip ~/environment/api-backend-manual/add_image app.py
+
+*** Lambda Function ***
+
+aws lambda create-function \
+--function-name add_image \
+--runtime python3.9 \
+--timeout 30 \
+--handler app.lambda_handler \
+--role $LAMBDA_ROLE \
+--environment Variables={SOURCE_BUCKET=$SOURCE_BUCKET} \
+--zip-file fileb://~/environment/api-backend-manual/add_image.zip
+
+
+*** Create An API Using an API Gateway ***
+At the top of the AWS Management Console, in the search bar, search for and choose 
+
+API Gateway
+, then choose Open Link in New Tab.
+
+On the Choose an API type page, in the HTTP API section, choose Build .
+
+On the Create an API page, in the Create and configure integrations section:
+
+Choose Add integration
+
+For Integrations, choose Lambda.
+
+For AWS Region, choose the region value that’s specified in the lab details at the left of this screen.
+
+For Lambda function, choose the function name that ends with function:add_image.
+
+Choose Add integration.
+
+For Integrations, choose Lambda.
+
+For AWS Region, choose the region value that’s specified in the lab details to the left of this screen.
+
+For Lambda function, choose the function name that ends with function:generate_grid.
+
+For API name, enter 
+
+generate-grid
+.
+
+Choose Next .
+
+On the Configure routes page, in the Configure routes section:
+
+For both entries that are listed, for the HTTP Method, choose POST.
+Choose Next .
+
+On the Define stages page, keep the default values and choose Next .
+
+On the Review and create page, choose Create .
+
+
+
+
+*** Back in CLI ***
+
+uniqueGridId=`date +%s` ; echo ${uniqueGridId}
+
+baseUrl='placeholder-for-invoke-url'
+
+cd ~/environment/api-backend-manual/source
+
+curl -X POST --data-binary @image01.jpg "${baseUrl}/add_image?uniqueGridId=${uniqueGridId}"
+
+
+aws dynamodb scan --table-name GridBuilder
+
+
+curl -s -X POST "${baseUrl}/generate_grid?uniqueGridId=${uniqueGridId}" | jq -r '"\nMessage: " + .message, "\nPresigned_URL: " + .presigned_url, "\n"'

@@ -1,0 +1,4 @@
+{
+    "SOURCE_BUCKET": "$source_bucket",
+    "DESTINATION_BUCKET": "$destination_bucket"
+}
